@@ -31,12 +31,12 @@ int PreviousDATA;
 
 boolean LEDstate;
 
-int displaycounter=25;
+int displaycounter=50;
 
 float temp_reading;
 
 byte temperature_graph[128];
-boolean record_temp = false;
+int graph_position = 0;
 
 boolean display_mode = HIGH;
 boolean do_display_update;
@@ -52,11 +52,14 @@ void setup() {
 
   pinMode(PinLED, OUTPUT);
   pinMode(PinSW, INPUT);
-  temperature_graph[0] = 15;
+
   if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { // Address 0x3C for 128x64
     Serial.println(F("SSD1306 allocation failed"));
     for(;;); // Don't proceed, loop forever
   }
+  /*for (int i = 0; i < 127; i++){
+    temperature_graph[i] = 50;
+  }*/
   display.display();
   delay(2000);
   display.clearDisplay();
@@ -82,28 +85,33 @@ void loop() {
     sensors.requestTemperatures();
     temp_reading = sensors.getTempCByIndex(0);
 
-    if (record_temp){
-      record_temp = false;
-      for (int n = 127; n >= 0; n--) {
-        temperature_graph[n+1] = temperature_graph[n];
-      }
-      int wert = temp_reading*2;
-      temperature_graph[0] = wert;
+    for (int n = 127; n >= 0; n--) {
+      temperature_graph[n+1] = temperature_graph[n];
+      //Serial.println(n);
     }
-    else {
-      record_temp = true;
+    /*for (int n = 0; n < 15; n++){
+      Serial.print(temperature_graph[n]);
+      Serial.print("");
+    }
+    Serial.println("");
+    Serial.println(graph_position);*/
+
+    temperature_graph[0] = int(temp_reading);
+
+
+    graph_position++;
+    if (graph_position == 128){
+      graph_position = 0;
     }
 
-    if (temp_reading < (displaycounter)) {
+    update_display();
+
+    if (temp_reading < (displaycounter-1)) {
       LEDstate = HIGH;
     }
     else {
       LEDstate = LOW;
     }
-
-    update_display();
-
-
     digitalWrite(PinLED, LEDstate);
     Serial.println(display_mode);
     TimeOfLastTempMeasuring=millis();
@@ -211,42 +219,14 @@ void update_display(){
    display.write(167);
    display.setTextSize(2);
    display.print("C");
-   if (LEDstate == HIGH){
-     display.print(" ");
-     display.setTextColor(BLACK,WHITE);
-     display.print("ON");
-     display.setTextColor(WHITE);
-     display.print("OFF");
-   }
-   else {
-     display.print(" ");
-     display.setTextColor(WHITE);
-     display.print("ON");
-     display.setTextColor(BLACK,WHITE);
-     display.print("OFF");
-   }
    display.display();
+   //Serial.println("Display Setup finished");
  }
 
  void display_graph() {
    display.clearDisplay();
-   display.setTextColor(WHITE);
-   display.setTextSize(1);
-   display.setCursor(0, 0);
-   display.print(int(temp_reading)-4);
-   display.setCursor(0, 28);
-   display.print(int(temp_reading));
-   display.setCursor(0, 56);
-   display.print(int(temp_reading)+4);
-   display.drawLine(13,0,13,63,WHITE);
-   display.drawPixel(12,0,WHITE);
-   for (int n = 14; n<128;n=n+2){
-     display.drawPixel(n, displaycounter*8-(int(temp_reading)-4)*8, WHITE);
-   }
-   display.drawPixel(12,31,WHITE);
-   display.drawPixel(12,63,WHITE);
-   for (int n = 14; n < 128; n++){
-     display.drawLine(n,temperature_graph[(n-14)]*4-(int(temp_reading)-4)*8,n,temperature_graph[(n-13)]*4-(int(temp_reading)-4)*8, WHITE);
+   for (int n = 0; n < 128; n++){
+     display.drawPixel(n,temperature_graph[n], WHITE);
    }
    display.display();
  }
