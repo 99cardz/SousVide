@@ -10,7 +10,7 @@
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 //PIN
 
-#define ONE_WIRE_BUS 4
+#define ONE_WIRE_BUS 7
 #define PinLED  8
 #define PinCLK 6
 #define PinDT 2
