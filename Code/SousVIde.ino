@@ -11,6 +11,7 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 //PIN
 
 #define ONE_WIRE_BUS 7
+//May Be different PINS on Arudino!!!!
 #define PinLED  8
 #define PinCLK 6
 #define PinDT 2
@@ -35,10 +36,10 @@ int displaycounter=50;
 
 float temp_reading;
 
-byte temperature_graph[128];
-int graph_position = 0;
+long OnTimer = 0;
+int MaxOnTime = (5 * 10000); // 5 Minutes
 
-boolean display_mode = HIGH;
+boolen OnOffSwitch = LOW;
 boolean do_display_update;
 
 void setup() {
@@ -85,31 +86,13 @@ void loop() {
     sensors.requestTemperatures();
     temp_reading = sensors.getTempCByIndex(0);
 
-    for (int n = 127; n >= 0; n--) {
-      temperature_graph[n+1] = temperature_graph[n];
-      //Serial.println(n);
-    }
-    /*for (int n = 0; n < 15; n++){
-      Serial.print(temperature_graph[n]);
-      Serial.print("");
-    }
-    Serial.println("");
-    Serial.println(graph_position);*/
-
-    temperature_graph[0] = int(temp_reading);
-
-
-    graph_position++;
-    if (graph_position == 128){
-      graph_position = 0;
-    }
-
     update_display();
 
-    if (temp_reading < (displaycounter-1)) {
+    if (temp_reading < displaycounter && OnOffSwitch == HIGH && LEDstate == LOW) {
       LEDstate = HIGH;
+      OnTimer = millis();
     }
-    else {
+    else if (temp_reading > displaycounter && LEDstate == HIGH){
       LEDstate = LOW;
     }
     digitalWrite(PinLED, LEDstate);
@@ -120,6 +103,13 @@ void loop() {
     do_display_update = LOW;
     update_display();
   }
+
+  if ((millis() - OnTimer) > MaxOnTime && LEDstate == HIGH) {
+    LEDstate = LOW;
+    OnOffSwitch = LOW;
+  }
+
+
 
 }//END main loop
 
@@ -179,17 +169,12 @@ if (PreviousCLK == 0 && PreviousDATA == 0) {
  }
 
 void innterupt_action(){
-  display_mode = !display_mode;
+  OnOffSwitch = !OnOffSwitch;
   do_display_update = HIGH;
 }
 
 void update_display(){
-  if (display_mode == HIGH){
-    text_display();
-  }
-  else {
-    display_graph();
-  }
+  text_display();
 }
 
  void text_display() {
@@ -221,12 +206,4 @@ void update_display(){
    display.print("C");
    display.display();
    //Serial.println("Display Setup finished");
- }
-
- void display_graph() {
-   display.clearDisplay();
-   for (int n = 0; n < 128; n++){
-     display.drawPixel(n,temperature_graph[n], WHITE);
-   }
-   display.display();
  }
